@@ -30,3 +30,24 @@ El módulo `src/config/env.js` valida automáticamente `MONGODB_URI` y `JWT_SECR
 5. Ejecuta `npm run dev`; el servidor se detendrá si no logra conectarse para evitar errores silenciosos.
 
 > Si necesitas cerrar el servidor, presiona `Ctrl + C`; la app hará un apagado elegante y liberará la conexión con MongoDB.
+
+## Estructura de carpetas
+
+```
+backend/
+├─ src/
+│  ├─ app.js               # Configuración de Express + middlewares
+│  ├─ server.js            # Bootstrap del servidor y conexión a la DB
+│  ├─ config/
+│  │  ├─ env.js            # Carga/validación de variables de entorno
+│  │  └─ database.js       # Helpers de conexión Mongoose
+│  ├─ routes/              # Definición de rutas (index central + subrutas)
+│  ├─ controllers/         # Controladores HTTP (ej. health)
+│  ├─ services/            # Lógica de negocio reutilizable
+│  ├─ models/              # Esquemas y modelos de Mongoose
+│  ├─ middlewares/         # Middlewares compartidos (auth, validaciones)
+│  └─ utils/               # Helpers y utilidades varias
+└─ package.json
+```
+
+> La ruta `/api/health` ahora vive en `routes/index.js` y usa el controlador correspondiente como ejemplo del flujo controller → route → service.
