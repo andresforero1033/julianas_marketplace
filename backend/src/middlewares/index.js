@@ -1,2 +1,1 @@
-// Middlewares placeholder. Export reusable middlewares from this module.
-export {};
+export { default as validateRequest } from './validation.middleware.js';

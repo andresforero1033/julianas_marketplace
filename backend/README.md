@@ -51,3 +51,36 @@ backend/
 ```
 
 > La ruta `/api/health` ahora vive en `routes/index.js` y usa el controlador correspondiente como ejemplo del flujo controller → route → service.
+
+## Endpoints disponibles
+
+- `GET /api/health`: comprueba que el backend esté en línea.
+- `POST /api/auth/register`: crea un nuevo usuario (roles permitidos: `compradora`, `vendedora`, `admin`).
+
+### Ejemplo `POST /api/auth/register`
+
+```bash
+curl -X POST http://localhost:4000/api/auth/register \
+	-H "Content-Type: application/json" \
+	-d '{
+		"email": "usuario@example.com",
+		"password": "MiClaveSegura123",
+		"role": "compradora"
+	}'
+```
+
+Respuesta esperada (201):
+
+```json
+{
+	"message": "Usuario registrado correctamente.",
+	"user": {
+		"_id": "66bff...",
+		"email": "usuario@example.com",
+		"role": "compradora",
+		"isActive": true,
+		"createdAt": "2025-12-17T...",
+		"updatedAt": "2025-12-17T..."
+	}
+}
+```

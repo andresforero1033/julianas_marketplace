@@ -1,2 +1,1 @@
-// Services layer placeholder. Add domain-specific services here.
-export {};
+export * from './user.service.js';
