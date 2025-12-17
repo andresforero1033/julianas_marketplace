@@ -60,6 +60,10 @@ backend/
 - `POST /api/auth/login`: devuelve JWT y datos básicos del usuario.
 - `GET /api/auth/me`: requiere token válido, retorna el usuario autenticado.
 - `GET /api/auth/admin/ping`: requiere token y rol `admin` (permite validar permisos).
+- `GET /api/users`: lista usuarios (solo admin, acepta filtros `role`, `isActive`, `page`, `limit`).
+- `GET /api/users/:id`: obtiene un usuario por ID (admin).
+- `PATCH /api/users/:id`: actualiza `role`, `isActive` y/o `email` (admin).
+- `DELETE /api/users/:id`: desactiva al usuario (`isActive = false`, admin).
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -114,4 +118,22 @@ Usa el token en los endpoints protegidos:
 
 ```bash
 curl http://localhost:4000/api/auth/me -H "Authorization: Bearer <jwt>"
+```
+
+### Ejemplo `GET /api/users`
+
+```bash
+curl "http://localhost:4000/api/users?role=vendedora&isActive=true" \
+	-H "Authorization: Bearer <admin_jwt>"
+```
+
+Respuesta esperada (200):
+
+```json
+{
+	"items": [{ "_id": "...", "email": "...", "role": "vendedora" }],
+	"total": 5,
+	"page": 1,
+	"pages": 1
+}
 ```

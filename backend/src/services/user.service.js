@@ -69,4 +69,91 @@ export const authenticateUser = async ({ email, password }) => {
 
   return sanitizeUser(user);
 };
+
+export const listUsers = async ({ role, isActive, page = 1, limit = 20 }) => {
+  const query = {};
+
+  if (role && ROLES.includes(role)) {
+    query.role = role;
+  }
+
+  if (typeof isActive === 'boolean') {
+    query.isActive = isActive;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    User.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
+    User.countDocuments(query),
+  ]);
+
+  return {
+    items: items.map(sanitizeUser),
+    total,
+    page,
+    pages: Math.ceil(total / limit) || 1,
+  };
+};
+
+export const getUserById = async (id) => {
+  const user = await User.findById(id);
+  if (!user) {
+    const error = new Error('USER_NOT_FOUND');
+    error.statusCode = 404;
+    throw error;
+  }
+  return sanitizeUser(user);
+};
+
+export const updateUserById = async (id, payload) => {
+  const updates = {};
+
+  if (payload.role) {
+    if (!ROLES.includes(payload.role)) {
+      const error = new Error('INVALID_ROLE');
+      error.statusCode = 400;
+      throw error;
+    }
+    updates.role = payload.role;
+  }
+
+  if (typeof payload.isActive === 'boolean') {
+    updates.isActive = payload.isActive;
+  }
+
+  if (payload.email) {
+    updates.email = payload.email.trim().toLowerCase();
+  }
+
+  const user = await User.findByIdAndUpdate(
+    id,
+    { $set: updates },
+    { new: true, runValidators: true },
+  );
+
+  if (!user) {
+    const error = new Error('USER_NOT_FOUND');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return sanitizeUser(user);
+};
+
+export const softDeleteUserById = async (id) => {
+  const user = await User.findByIdAndUpdate(
+    id,
+    { $set: { isActive: false } },
+    { new: true },
+  );
+
+  if (!user) {
+    const error = new Error('USER_NOT_FOUND');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return sanitizeUser(user);
+};
 *** End of File
