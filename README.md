@@ -1,41 +1,83 @@
 # Juliana's Marketplace
 
-Marketplace multivendedor enfocado 100% en productos femeninos. Este repositorio centraliza la documentación funcional y el código del MVP: backend en Node.js + Express, base de datos MongoDB Atlas y frontend planeado en React + Tailwind.
+<div align="center">
 
-## Objetivo del proyecto
+Marketplace multivendedor especializado en productos femeninos.
 
-Crear una plataforma similar a Temu, pero especializada en curaduría femenina: joyería, accesorios, moda, lifestyle y tecnología con estética cuidada. La experiencia prioriza diseño responsive, flujos mobile-first y dashboards diferenciados para compradoras, vendedoras y administración.
+![Stack](https://img.shields.io/badge/Stack-React%20%7C%20Express%20%7C%20MongoDB-ff69b4)
+![Status](https://img.shields.io/badge/MVP-En%20desarrollo-f39)
+![License](https://img.shields.io/badge/Licencia-MIT-lightgrey)
 
-## Arquitectura
+</div>
 
-1. **Frontend**: React + Tailwind (UI, routing, manejo básico de estado, consumo de API).
-2. **API Backend**: Node.js + Express, JWT para autenticación, reglas de negocio y comunicación con la base de datos.
-3. **Base de datos**: MongoDB Atlas con colecciones para usuarios, vendedoras, productos, carritos, pedidos y pagos.
+## ✨ Visión general
 
-## Estado actual
+- Curaduría femenina: joyería, accesorios, moda, lifestyle y tech.
+- UX mobile-first con dashboards separados para compradoras, vendedoras y admin.
+- Documentación integral del MVP y roadmap post-MVP dentro de `Documents Juliana´s/`.
 
-- Documentación funcional y de diseño completa en `Documents Juliana´s/`.
-- Esqueleto del backend en `backend/` con Express configurado y endpoint `/api/health`.
-- Roadmap por fases (preparación, UX/UI, backend, frontend, funcionalidades avanzadas, optimización y deploy).
+## 🧭 Tabla de contenidos
 
+1. [Arquitectura](#-arquitectura)
+2. [Estado del proyecto](#-estado-del-proyecto)
+3. [Stack y requisitos](#-stack-y-requisitos)
+4. [Guía rápida backend](#-guía-rápida-backend)
+5. [Documentación relacionada](#-documentación-relacionada)
 
-## Requisitos mínimos
+## 🏗 Arquitectura
+
+```
+React + Tailwind (UI/UX)
+	|
+	v
+Node.js + Express (API, auth, reglas)
+	|
+	v
+MongoDB Atlas (persistencia marketplace)
+```
+
+- **Frontend**: componentes reutilizables, jerarquía visual responsive, consumo de API.
+- **Backend**: Express modular (routes/controllers/services), JWT, validaciones y mapeo a MongoDB.
+- **Base de datos**: colecciones para users, vendors, products, carts, orders y payments, preparadas para crecer con post-MVP.
+
+## 📊 Estado del proyecto
+
+| Fase | Descripción | Estado |
+| --- | --- | --- |
+| 0 | Preparación (alcance, roles, repos) | ✅ completado |
+| 1 | UX/UI y arquitectura | ✅ completado |
+| 2 | Backend core | 🚧 en progreso |
+| 3 | Frontend core | ⏳ pendiente |
+| 4-6 | Funcionalidades avanzadas, optimización, deploy | ⏳ pendiente |
+
+## 🧰 Stack y requisitos
 
 - Node.js 18+
 - npm 9+
-- Cuenta en MongoDB Atlas y Render (para deploy posterior)
+- Cuenta en MongoDB Atlas y Render (deploy futuro)
 
-## Desarrollo local (backend)
+| Capa | Tecnología | Rol |
+| --- | --- | --- |
+| UI | React, Vite, Tailwind | Frontend responsive y componentes base |
+| API | Node.js, Express, JWT, Joi (validaciones futuras) | Lógica de negocio y seguridad |
+| Datos | MongoDB Atlas, Mongoose | Modelado flexible y relaciones referenciales |
+
+## ⚙ Guía rápida backend
 
 ```bash
 cd backend
-cp .env.example .env  # Completa los valores
+cp .env.example .env  # Ajusta PORT, MONGODB_URI, CLIENT_URL, JWT_SECRET
 npm install
 npm run dev
 ```
 
-El servidor se levanta por defecto en `http://localhost:4000` y expone `GET /api/health`.
+El servidor se levanta en `http://localhost:4000` y expone `GET /api/health` como chequeo básico.
 
----
+## 📚 Documentación relacionada
 
-Para más detalles revisa los documentos dentro de `Documents Juliana´s/`, donde encontrarás alcance del MVP, requerimientos, modelos de datos, wireframes, paleta de colores y estructura visual.
+- `Documents Juliana´s/Alcance del MVP – Juliana’s…md`
+- `Documents Juliana´s/Modelos de Datos…md`
+- `Documents Juliana´s/Wireframes – Juliana’s Marketplace…md`
+- `Documents Juliana´s/Paleta de Colores – Juliana’s…md`
+
+Explora la carpeta completa para requerimientos, colecciones MongoDB, roadmap post-MVP, lineamientos visuales y componentes UI.
