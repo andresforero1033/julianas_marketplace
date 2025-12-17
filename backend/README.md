@@ -17,6 +17,7 @@ NODE_ENV=development
 MONGODB_URI=...
 CLIENT_URL=http://localhost:5173
 JWT_SECRET=...
+JWT_EXPIRES_IN=1d
 ```
 
 El módulo `src/config/env.js` valida automáticamente `MONGODB_URI` y `JWT_SECRET`, establece valores por defecto para el puerto, entorno y URL del cliente, y expone la configuración al resto de la aplicación.
@@ -56,6 +57,9 @@ backend/
 
 - `GET /api/health`: comprueba que el backend esté en línea.
 - `POST /api/auth/register`: crea un nuevo usuario (roles permitidos: `compradora`, `vendedora`, `admin`).
+- `POST /api/auth/login`: devuelve JWT y datos básicos del usuario.
+- `GET /api/auth/me`: requiere token válido, retorna el usuario autenticado.
+- `GET /api/auth/admin/ping`: requiere token y rol `admin` (permite validar permisos).
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -83,4 +87,31 @@ Respuesta esperada (201):
 		"updatedAt": "2025-12-17T..."
 	}
 }
+```
+
+### Ejemplo `POST /api/auth/login`
+
+```bash
+curl -X POST http://localhost:4000/api/auth/login \
+	-H "Content-Type: application/json" \
+	-d '{
+		"email": "usuario@example.com",
+		"password": "MiClaveSegura123"
+	}'
+```
+
+Respuesta esperada (200):
+
+```json
+{
+	"message": "Inicio de sesión exitoso.",
+	"token": "<jwt>",
+	"user": { ... }
+}
+```
+
+Usa el token en los endpoints protegidos:
+
+```bash
+curl http://localhost:4000/api/auth/me -H "Authorization: Bearer <jwt>"
 ```

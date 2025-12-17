@@ -3,7 +3,7 @@ import { User, ROLES } from '../models/index.js';
 
 const SALT_ROUNDS = 10;
 
-const sanitizeUser = (userDoc) => {
+export const sanitizeUser = (userDoc) => {
   if (!userDoc) return null;
   const user = userDoc.toObject({ versionKey: false });
   delete user.password;
@@ -37,9 +37,36 @@ export const createUser = async ({ email, password, role = 'compradora' }) => {
   return sanitizeUser(user);
 };
 
-export const findUserByEmail = async (email) => {
+const findUserByEmail = async (email) => {
   const normalizedEmail = email.trim().toLowerCase();
   const user = await User.findOne({ email: normalizedEmail });
   return user;
+};
+
+export const findUserById = async (id) => User.findById(id);
+
+export const authenticateUser = async ({ email, password }) => {
+  const user = await findUserByEmail(email);
+
+  if (!user) {
+    const error = new Error('INVALID_CREDENTIALS');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  if (!user.isActive) {
+    const error = new Error('USER_INACTIVE');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const isValidPassword = await bcrypt.compare(password, user.password);
+  if (!isValidPassword) {
+    const error = new Error('INVALID_CREDENTIALS');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  return sanitizeUser(user);
 };
 *** End of File

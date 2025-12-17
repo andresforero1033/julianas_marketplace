@@ -25,6 +25,7 @@ const config = {
   },
   security: {
     jwtSecret: requireEnv('JWT_SECRET'),
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   },
   client: {
     url: process.env.CLIENT_URL || 'http://localhost:5173',
