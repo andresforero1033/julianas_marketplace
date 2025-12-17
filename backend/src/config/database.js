@@ -1,10 +1,8 @@
 import mongoose from 'mongoose';
 
-const connectDatabase = async () => {
-  const mongoUri = process.env.MONGODB_URI;
-
+const connectDatabase = async (mongoUri) => {
   if (!mongoUri) {
-    throw new Error('Missing MONGODB_URI environment variable. Check your .env file.');
+    throw new Error('Missing MongoDB connection string.');
   }
 
   try {

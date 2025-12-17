@@ -13,10 +13,13 @@ Copia `.env.example` a `.env` y ajusta los valores:
 
 ```
 PORT=4000
+NODE_ENV=development
 MONGODB_URI=...
 CLIENT_URL=http://localhost:5173
 JWT_SECRET=...
 ```
+
+El módulo `src/config/env.js` valida automáticamente `MONGODB_URI` y `JWT_SECRET`, establece valores por defecto para el puerto, entorno y URL del cliente, y expone la configuración al resto de la aplicación.
 
 ## Conexión a MongoDB Atlas
 

@@ -1,17 +1,15 @@
-import dotenv from 'dotenv';
 import app from './app.js';
+import config from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
-
-dotenv.config();
-
-const PORT = process.env.PORT || 4000;
 
 const startServer = async () => {
   try {
-    await connectDatabase();
+    await connectDatabase(config.database.uri);
 
-    const server = app.listen(PORT, () => {
-      console.log(`Juliana's API running on http://localhost:${PORT}`);
+    const server = app.listen(config.app.port, () => {
+      console.log(
+        `Juliana's API running on http://localhost:${config.app.port} (${config.app.nodeEnv})`,
+      );
     });
 
     const gracefulShutdown = async () => {
