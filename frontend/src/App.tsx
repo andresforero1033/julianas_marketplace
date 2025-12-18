@@ -1,4 +1,7 @@
+import type { ChangeEvent } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import type { Role } from './context/AuthContext.tsx';
+import { useAuth } from './hooks/useAuth.ts';
 
 const navLinks = [
   { to: '/', label: 'Inicio' },
@@ -13,7 +16,26 @@ const roadmapSignals = [
   { label: 'Auth Views', status: 'Siguiente', tone: 'text-primary' },
 ];
 
+const roleLabels: Record<Role, string> = {
+  buyer: 'Compradora',
+  vendor: 'Vendedora',
+  admin: 'Administradora',
+};
+
 function App() {
+  const { user, roles, loginAs, logout } = useAuth();
+
+  const handleRoleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextRole = event.target.value as Role;
+
+    if (!nextRole) {
+      logout();
+      return;
+    }
+
+    loginAs(nextRole);
+  };
+
   return (
     <div className="min-h-screen bg-light text-text">
       <div className="relative isolate flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-white via-light to-white">
@@ -43,6 +65,40 @@ function App() {
               <Link className="rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/30" to="/registro">
                 Crear cuenta
               </Link>
+            </div>
+
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-4 text-xs text-muted">
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Sesión de prueba</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                <select
+                  className="rounded-2xl border border-muted/50 bg-white px-4 py-2 text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  onChange={handleRoleChange}
+                  value={user?.role ?? ''}
+                >
+                  <option value="">Invitada</option>
+                  {roles.map((role) => (
+                    <option key={role} value={role}>
+                      {roleLabels[role]}
+                    </option>
+                  ))}
+                </select>
+                <span className="rounded-2xl bg-light px-4 py-2 font-semibold text-text">
+                  {user ? `${user.name} · ${roleLabels[user.role]}` : 'Sin sesión activa'}
+                </span>
+                {user ? (
+                  <button
+                    className="rounded-full border border-muted px-4 py-2 font-semibold text-text transition hover:border-primary hover:text-primary"
+                    onClick={logout}
+                    type="button"
+                  >
+                    Cerrar sesión
+                  </button>
+                ) : (
+                  <Link className="rounded-full border border-muted px-4 py-2 font-semibold text-text transition hover:border-primary hover:text-primary" to="/login">
+                    Acceder
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
 
