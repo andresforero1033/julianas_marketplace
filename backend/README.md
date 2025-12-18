@@ -74,6 +74,16 @@ backend/
 - `PATCH /api/vendor-profiles/me`: permite a la vendedora actualizar su tienda (sin tocar aprobación/estatus).
 - `GET /api/vendor-profiles`: listado administrativo con filtros por aprobación y estado.
 - `PATCH /api/vendor-profiles/:id` / `DELETE /api/vendor-profiles/:id`: gestión administrada (aprobaciones, suspensiones, etc.).
+- `GET /api/categories`: listado público con búsqueda y filtros por estado.
+- `GET /api/categories/:id`: detalle público de la categoría.
+- `POST /api/categories`: crea categorías (solo admin).
+- `PATCH /api/categories/:id`: actualiza nombre, slug o estado (admin).
+- `DELETE /api/categories/:id`: desactiva la categoría (admin).
+- `GET /api/products`: catálogo público (filtros por categoría, vendedora, precio, estado, publicación).
+- `GET /api/products/:id`: detalle de producto con datos básicos de categoría y vendedora.
+- `POST /api/products`: crea productos (vendedoras crean los propios; admin puede indicar `vendorId`).
+- `PATCH /api/products/:id`: actualiza datos del producto respetando la propiedad (vendedora/admin).
+- `DELETE /api/products/:id`: desactiva el producto (vendedora propietaria o admin).
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -148,6 +158,35 @@ curl -X POST http://localhost:4000/api/buyer-profiles \
 				"isDefault": true
 			}
 		]
+	}'
+```
+
+### Ejemplo `POST /api/categories`
+
+```bash
+curl -X POST http://localhost:4000/api/categories \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <jwt_admin>" \
+	-d '{
+		"name": "Joyería",
+		"description": "Accesorios y joyas",
+		"slug": "joyeria"
+	}'
+```
+
+### Ejemplo `POST /api/products`
+
+```bash
+curl -X POST http://localhost:4000/api/products \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <jwt_vendedora>" \
+	-d '{
+		"name": "Collar Dorado",
+		"description": "Collar minimalista bañado en oro",
+		"price": 120000,
+		"stock": 15,
+		"categoryId": "<category_id>",
+		"images": ["https://cdn.example.com/collar.jpg"]
 	}'
 ```
 
