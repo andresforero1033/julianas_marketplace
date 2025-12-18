@@ -117,9 +117,12 @@ export default function CartPage() {
                         <span>Total estimado</span>
                         <span>${subtotal.toFixed(2)}</span>
                     </div>
-                    <button type="button" className="mt-6 w-full rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800">
+                    <Link
+                        to="/checkout"
+                        className="mt-6 flex w-full items-center justify-center rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
+                    >
                         Continuar al pago
-                    </button>
+                    </Link>
                 </aside>
             </div>
         </section>
