@@ -7,6 +7,7 @@ import vendorRoutes from './vendor.routes.js';
 import categoryRoutes from './category.routes.js';
 import productRoutes from './product.routes.js';
 import mediaRoutes from './media.routes.js';
+import cartRoutes from './cart.routes.js';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/vendor-profiles', vendorRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 router.use('/media', mediaRoutes);
+router.use('/cart', cartRoutes);
 
 const registerRoutes = (app) => {
   app.use('/api', router);

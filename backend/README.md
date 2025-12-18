@@ -92,6 +92,12 @@ backend/
 - `POST /api/media/assets`: registra metadatos de la imagen subida (URL final, owner, etc.).
 - `GET /api/media/assets`: lista los assets filtrados por owner.
 - `DELETE /api/media/assets/:id`: elimina un asset (admin o quien lo subió).
+- `GET /api/cart`: recupera (o crea) el carrito persistido de la persona autenticada.
+- `POST /api/cart/items`: agrega un producto/variante al carrito.
+- `PATCH /api/cart/items/:itemId`: actualiza la cantidad de un ítem existente.
+- `DELETE /api/cart/items/:itemId`: elimina un ítem puntual.
+- `POST /api/cart/clear`: vacía el carrito conservando el registro.
+- `POST /api/cart/validate`: vuelve a consultar el stock de cada ítem del carrito y reporta incidencias.
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -117,6 +123,46 @@ Respuesta esperada (201):
 		"isActive": true,
 		"createdAt": "2025-12-17T...",
 		"updatedAt": "2025-12-17T..."
+	}
+}
+```
+
+### Ejemplo `POST /api/cart/validate`
+
+```bash
+curl -X POST http://localhost:4000/api/cart/validate \
+	-H "Authorization: Bearer <jwt_compradora>"
+```
+
+Respuesta esperada (200):
+
+```json
+{
+	"message": "Stock verificado con éxito.",
+	"cart": {
+		"subtotal": 240000,
+		"totalItems": 1,
+		"totalQuantity": 2,
+		"items": [
+			{
+				"_id": "66c0...",
+				"productId": "66bf...",
+				"quantity": 2
+			}
+		]
+	},
+	"validation": {
+		"isValid": true,
+		"items": [
+			{
+				"itemId": "66c0...",
+				"status": "valid",
+				"availableQuantity": 5,
+				"requestedQuantity": 2,
+				"issues": []
+			}
+		],
+		"checkedAt": "2025-12-17T12:00:00.000Z"
 	}
 }
 ```
@@ -238,6 +284,44 @@ curl -X POST http://localhost:4000/api/media/presign \
 		"mimeType": "image/jpeg",
 		"fileSize": 204800
 	}'
+```
+
+### Ejemplo `POST /api/cart/items`
+
+```bash
+curl -X POST http://localhost:4000/api/cart/items \
+	-H "Authorization: Bearer <jwt_compradora>" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"productId": "<product_id>",
+		"variantId": "<variant_id>",
+		"quantity": 2
+	}'
+```
+
+Respuesta esperada (201):
+
+```json
+{
+	"message": "Producto agregado al carrito.",
+	"cart": {
+		"subtotal": 240000,
+		"totalItems": 1,
+		"totalQuantity": 2,
+		"items": [
+			{
+				"_id": "66c0...",
+				"productId": "66bf...",
+				"variantId": "66c0...",
+				"quantity": 2,
+				"unitPrice": 120000,
+				"subtotal": 240000,
+				"productName": "Collar Dorado",
+				"variantName": "Collar Dorado / Talla M"
+			}
+		]
+	}
+}
 ```
 
 ### Ejemplo `POST /api/vendor-profiles`

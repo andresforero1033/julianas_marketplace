@@ -6,5 +6,4 @@ export * from './vendor.controller.js';
 export * from './category.controller.js';
 export * from './product.controller.js';
 export * from './media.controller.js';
-export * from './buyerProfile.controller.js';
-export * from './vendor.controller.js';
+export * from './cart.controller.js';
