@@ -64,6 +64,16 @@ backend/
 - `GET /api/users/:id`: obtiene un usuario por ID (admin).
 - `PATCH /api/users/:id`: actualiza `role`, `isActive` y/o `email` (admin).
 - `DELETE /api/users/:id`: desactiva al usuario (`isActive = false`, admin).
+- `POST /api/buyer-profiles`: crea el perfil de una compradora autenticada (admin puede indicar `userId`).
+- `GET /api/buyer-profiles/me`: recupera el perfil de la compradora autenticada.
+- `PATCH /api/buyer-profiles/me`: actualiza datos y direcciones de la compradora.
+- `GET /api/buyer-profiles`: listado administrado con búsqueda y paginación.
+- `PATCH /api/buyer-profiles/:id` / `DELETE /api/buyer-profiles/:id`: mantenimiento administrativo.
+- `POST /api/vendor-profiles`: crea el perfil de vendedora (rol `vendedora` o admin).
+- `GET /api/vendor-profiles/me`: retorna la información de la tienda asociada al usuario autenticado.
+- `PATCH /api/vendor-profiles/me`: permite a la vendedora actualizar su tienda (sin tocar aprobación/estatus).
+- `GET /api/vendor-profiles`: listado administrativo con filtros por aprobación y estado.
+- `PATCH /api/vendor-profiles/:id` / `DELETE /api/vendor-profiles/:id`: gestión administrada (aprobaciones, suspensiones, etc.).
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -118,6 +128,43 @@ Usa el token en los endpoints protegidos:
 
 ```bash
 curl http://localhost:4000/api/auth/me -H "Authorization: Bearer <jwt>"
+```
+
+### Ejemplo `POST /api/buyer-profiles`
+
+```bash
+curl -X POST http://localhost:4000/api/buyer-profiles \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <jwt_compradora>" \
+	-d '{
+		"fullName": "Juliana Perez",
+		"phone": "+57 3000000000",
+		"addresses": [
+			{
+				"label": "Casa",
+				"street": "Cra 7 #70-10",
+				"city": "Bogotá",
+				"country": "Colombia",
+				"isDefault": true
+			}
+		]
+	}'
+```
+
+### Ejemplo `POST /api/vendor-profiles`
+
+```bash
+curl -X POST http://localhost:4000/api/vendor-profiles \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <jwt_vendedora>" \
+	-d '{
+		"storeName": "Juliana Accessories",
+		"description": "Accesorios hechos a mano",
+		"contactEmail": "tienda@example.com",
+		"socialLinks": {
+			"instagram": "https://instagram.com/juliana"
+		}
+	}'
 ```
 
 ### Ejemplo `GET /api/users`

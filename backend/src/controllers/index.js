@@ -1,3 +1,5 @@
 export * from './health.controller.js';
 export * from './auth.controller.js';
 export * from './user.controller.js';
+export * from './buyerProfile.controller.js';
+export * from './vendor.controller.js';
