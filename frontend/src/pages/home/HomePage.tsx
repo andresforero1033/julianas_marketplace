@@ -47,7 +47,7 @@ function HomePage() {
             <span className="font-semibold text-success">Completado</span>
           </div>
           <div className="h-2 rounded-full bg-light">
-            <div className="h-full rounded-full bg-primary" style={{ width: '25%' }} />
+            <div className="h-full w-1/4 rounded-full bg-primary" />
           </div>
         </div>
       </div>

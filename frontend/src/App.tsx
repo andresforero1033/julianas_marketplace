@@ -5,6 +5,8 @@ import { useAuth } from './hooks/useAuth.ts';
 
 const navLinks = [
   { to: '/', label: 'Inicio' },
+  { to: '/catalogo', label: 'Catálogo' },
+  { to: '/buscar', label: 'Buscar' },
   { to: '/panel/vendedora', label: 'Panel vendedora' },
   { to: '/panel/admin', label: 'Panel admin' },
   { to: '/registro', label: 'Registro' },
@@ -70,8 +72,12 @@ function App() {
             <div className="rounded-3xl border border-white/70 bg-white/80 p-4 text-xs text-muted">
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Sesión de prueba</p>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                <label className="sr-only" htmlFor="session-role-select">
+                  Seleccionar rol de sesión
+                </label>
                 <select
                   className="rounded-2xl border border-muted/50 bg-white px-4 py-2 text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  id="session-role-select"
                   onChange={handleRoleChange}
                   value={user?.role ?? ''}
                 >

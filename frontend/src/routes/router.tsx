@@ -3,6 +3,9 @@ import App from '../App.tsx';
 import ProtectedRoute from '../components/auth/ProtectedRoute.tsx';
 import LoginPage from '../pages/auth/LoginPage.tsx';
 import RegisterPage from '../pages/auth/RegisterPage.tsx';
+import CatalogPage from '../pages/catalog/CatalogPage.tsx';
+import ProductDetailPage from '../pages/catalog/ProductDetailPage.tsx';
+import SearchPage from '../pages/catalog/SearchPage.tsx';
 import HomePage from '../pages/home/HomePage.tsx';
 import PlaceholderPage from '../pages/system/PlaceholderPage.tsx';
 
@@ -14,6 +17,18 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <HomePage />,
+      },
+      {
+        path: 'catalogo',
+        element: <CatalogPage />,
+      },
+      {
+        path: 'catalogo/:productId',
+        element: <ProductDetailPage />,
+      },
+      {
+        path: 'buscar',
+        element: <SearchPage />,
       },
       {
         path: 'login',
