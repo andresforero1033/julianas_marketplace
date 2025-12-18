@@ -98,6 +98,9 @@ backend/
 - `DELETE /api/cart/items/:itemId`: elimina un ítem puntual.
 - `POST /api/cart/clear`: vacía el carrito conservando el registro.
 - `POST /api/cart/validate`: vuelve a consultar el stock de cada ítem del carrito y reporta incidencias.
+- `POST /api/orders`: genera un pedido a partir del carrito validado.
+- `GET /api/orders`: lista los pedidos del usuario autenticado (admin ve todos).
+- `GET /api/orders/:id`: detalle del pedido si eres dueña o admin.
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -123,6 +126,53 @@ Respuesta esperada (201):
 		"isActive": true,
 		"createdAt": "2025-12-17T...",
 		"updatedAt": "2025-12-17T..."
+	}
+}
+```
+
+### Ejemplo `POST /api/orders`
+
+```bash
+curl -X POST http://localhost:4000/api/orders \
+	-H "Authorization: Bearer <jwt_compradora>" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"shippingAddress": {
+			"recipientName": "Juliana Perez",
+			"phone": "+57 3000000000",
+			"street": "Cra 7 #70-10",
+			"city": "Bogotá",
+			"country": "Colombia"
+		},
+		"paymentMethod": {
+			"type": "transferencia",
+			"reference": "PAY-123456"
+		},
+		"shippingCost": 10000,
+		"notes": "Por favor entregar después de las 6pm"
+	}'
+```
+
+Respuesta esperada (201):
+
+```json
+{
+	"message": "Pedido creado correctamente.",
+	"order": {
+		"_id": "66c1...",
+		"orderNumber": "ORD-1734440000000-1234",
+		"total": 250000,
+		"status": "pending",
+		"items": [
+			{
+				"productId": "66bf...",
+				"vendorId": "66b1...",
+				"quantity": 2,
+				"subtotal": 240000
+			}
+		],
+		"shippingAddress": { "city": "Bogotá" },
+		"createdAt": "2025-12-17T12:15:00.000Z"
 	}
 }
 ```
