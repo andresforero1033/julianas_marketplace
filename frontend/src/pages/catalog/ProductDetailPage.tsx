@@ -1,11 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ProductCard from '../../components/catalog/ProductCard.tsx';
 import { mockProducts } from '../../data/products.ts';
+import { useCart } from '../../hooks/useCart.ts';
+import { createDefaultVariantSelection, variantPriceAdjustment, variantStock, type VariantSelectionMap } from '../../utils/productVariants.ts';
 
-function ProductDetailPage() {
-  const { productId } = useParams();
+function ProductDetailPageContent({ productId }: { productId?: string }) {
   const product = mockProducts.find((item) => item.id === productId);
+  const [selectedVariants, setSelectedVariants] = useState<VariantSelectionMap>(() => createDefaultVariantSelection(product));
+  const { addItem } = useCart();
 
   const relatedProducts = useMemo(() => {
     if (!product) {
@@ -13,6 +16,29 @@ function ProductDetailPage() {
     }
     return mockProducts.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3);
   }, [product]);
+
+  const selectionSummary = useMemo(() => {
+    if (!product?.variants) {
+      return 'Única presentación';
+    }
+    return product.variants
+      .map((group) => {
+        const option = group.options.find((item) => item.id === selectedVariants[group.id]);
+        return `${group.name}: ${option?.label ?? 'sin elegir'}`;
+      })
+      .join(' · ');
+  }, [product, selectedVariants]);
+  const priceModifier = product ? variantPriceAdjustment(product, selectedVariants) : 0;
+  const finalPrice = product ? product.price + priceModifier : 0;
+  const stockForSelection = product ? variantStock(product, selectedVariants) : 0;
+  const canAddToCart = Boolean(product && stockForSelection > 0);
+
+  const handleAddToCart = () => {
+    if (!product) {
+      return;
+    }
+    addItem({ product, selection: selectedVariants });
+  };
 
   if (!product) {
     return (
@@ -54,16 +80,86 @@ function ProductDetailPage() {
               </span>
             ))}
           </div>
+          {product.variants ? (
+            <div className="space-y-4 rounded-3xl border border-light bg-white p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Selecciona variantes</p>
+              {product.variants.map((group) => (
+                <div key={group.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-text">{group.name}</p>
+                    <span className="text-xs text-muted">
+                      {selectedVariants[group.id]
+                        ? group.options.find((option) => option.id === selectedVariants[group.id])?.stock ?? 0
+                        : 0}{' '}
+                      en stock
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.options.map((option) => {
+                      const isSelected = selectedVariants[group.id] === option.id;
+                      const isDisabled = option.stock === 0;
+                      const classes = [
+                        'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                        isSelected ? 'border-text bg-text text-white' : 'border-muted/40 text-text hover:border-primary',
+                        isDisabled ? 'cursor-not-allowed opacity-40 hover:border-muted/40' : '',
+                      ].join(' ');
+                      return (
+                        <button
+                          key={option.id}
+                          className={classes}
+                          disabled={isDisabled}
+                          type="button"
+                          onClick={() =>
+                            setSelectedVariants((prev) => ({
+                              ...prev,
+                              [group.id]: option.id,
+                            }))
+                          }
+                        >
+                          {option.label}
+                          {option.priceModifier ? ` · +$${option.priceModifier.toLocaleString('es-CO')}` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-2xl bg-light/60 p-4 text-sm text-muted">
+                <p>
+                    Selección actual: {selectionSummary}
+                </p>
+                <p className="mt-1">
+                  {stockForSelection > 0
+                    ? `${stockForSelection} unidades disponibles para esta combinación`
+                    : 'Sin stock disponible para esta combinación'}
+                </p>
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-4 rounded-3xl bg-light/60 p-6">
-            <p className="text-xl font-semibold text-text">Precio: ${product.price.toLocaleString('es-CO')}</p>
+            <div>
+              <p className="text-sm text-muted">Precio final con variantes</p>
+              <p className="text-2xl font-semibold text-text">${finalPrice.toLocaleString('es-CO')}</p>
+              {priceModifier !== 0 ? (
+                <p className="text-xs text-muted">
+                  Base ${product.price.toLocaleString('es-CO')} · Ajustes ${priceModifier > 0 ? '+' : ''}
+                  ${priceModifier.toLocaleString('es-CO')}
+                </p>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-3 text-sm text-muted">
               <span className="rounded-full bg-white px-4 py-2">Pago seguro</span>
               <span className="rounded-full bg-white px-4 py-2">Envío nacional</span>
               <span className="rounded-full bg-white px-4 py-2">Cambios 7 días</span>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button className="rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white hover:opacity-90" type="button">
-                Agregar al carrito
+              <button
+                className="rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:opacity-90 disabled:opacity-40"
+                disabled={!canAddToCart}
+                type="button"
+                onClick={handleAddToCart}
+              >
+                {canAddToCart ? 'Agregar al carrito' : 'Sin stock'}
               </button>
               <button className="rounded-full border border-muted px-6 py-3 text-sm font-semibold text-text hover:border-primary hover:text-primary" type="button">
                 Guardar
@@ -107,6 +203,11 @@ function ProductDetailPage() {
       ) : null}
     </div>
   );
+}
+
+function ProductDetailPage() {
+  const { productId } = useParams();
+  return <ProductDetailPageContent key={productId ?? 'detail'} productId={productId} />;
 }
 
 export default ProductDetailPage;

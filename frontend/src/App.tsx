@@ -7,6 +7,7 @@ const navLinks = [
   { to: '/', label: 'Inicio' },
   { to: '/catalogo', label: 'Catálogo' },
   { to: '/buscar', label: 'Buscar' },
+  { to: '/carrito', label: 'Carrito' },
   { to: '/panel/vendedora', label: 'Panel vendedora' },
   { to: '/panel/admin', label: 'Panel admin' },
   { to: '/registro', label: 'Registro' },

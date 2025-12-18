@@ -8,6 +8,7 @@ import ProductDetailPage from '../pages/catalog/ProductDetailPage.tsx';
 import SearchPage from '../pages/catalog/SearchPage.tsx';
 import HomePage from '../pages/home/HomePage.tsx';
 import PlaceholderPage from '../pages/system/PlaceholderPage.tsx';
+import CartPage from '../pages/cart/CartPage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,10 @@ export const router = createBrowserRouter([
       {
         path: 'buscar',
         element: <SearchPage />,
+      },
+      {
+        path: 'carrito',
+        element: <CartPage />,
       },
       {
         path: 'login',
