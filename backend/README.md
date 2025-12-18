@@ -84,6 +84,14 @@ backend/
 - `POST /api/products`: crea productos (vendedoras crean los propios; admin puede indicar `vendorId`).
 - `PATCH /api/products/:id`: actualiza datos del producto respetando la propiedad (vendedora/admin).
 - `DELETE /api/products/:id`: desactiva el producto (vendedora propietaria o admin).
+- `POST /api/products/:id/variants`: crea variantes con SKU, atributos y stock granular.
+- `PATCH /api/products/:id/variants/:variantId`: actualiza una variante específica.
+- `DELETE /api/products/:id/variants/:variantId`: elimina una variante.
+- `PATCH /api/products/:id/stock`: ajusta el stock (general o por variante) con operaciones `set`/`increment`.
+- `POST /api/media/presign`: genera una URL firmada temporal (mock) para subir imágenes.
+- `POST /api/media/assets`: registra metadatos de la imagen subida (URL final, owner, etc.).
+- `GET /api/media/assets`: lista los assets filtrados por owner.
+- `DELETE /api/media/assets/:id`: elimina un asset (admin o quien lo subió).
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -187,6 +195,48 @@ curl -X POST http://localhost:4000/api/products \
 		"stock": 15,
 		"categoryId": "<category_id>",
 		"images": ["https://cdn.example.com/collar.jpg"]
+	}'
+```
+
+### Ejemplo `POST /api/products/:id/variants`
+
+```bash
+curl -X POST http://localhost:4000/api/products/<product_id>/variants \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <jwt_vendedora>" \
+	-d '{
+		"name": "Collar Dorado / Talla M",
+		"sku": "COLLAR-M",
+		"stock": 5,
+		"price": 125000,
+		"color": "Dorado",
+		"size": "M"
+	}'
+```
+
+### Ejemplo `PATCH /api/products/:id/stock`
+
+```bash
+curl -X PATCH http://localhost:4000/api/products/<product_id>/stock \
+	-H "Authorization: Bearer <jwt_vendedora>" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"operation": "increment",
+		"quantity": -2,
+		"variantId": "<variant_id>"
+	}'
+```
+
+### Ejemplo `POST /api/media/presign`
+
+```bash
+curl -X POST http://localhost:4000/api/media/presign \
+	-H "Authorization: Bearer <jwt_admin>" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"fileName": "collar.jpg",
+		"mimeType": "image/jpeg",
+		"fileSize": 204800
 	}'
 ```
 

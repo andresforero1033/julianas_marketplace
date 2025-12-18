@@ -15,6 +15,18 @@ const slugify = (value = '') =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '');
 
+const sanitizeVariant = (variantDoc) => {
+  if (!variantDoc) return null;
+  const variant =
+    typeof variantDoc.toObject === 'function'
+      ? variantDoc.toObject({ versionKey: false })
+      : { ...variantDoc };
+  if (variant._id && typeof variant._id.toString === 'function') {
+    variant._id = variant._id.toString();
+  }
+  return variant;
+};
+
 const sanitizeProduct = (doc) => {
   if (!doc) return null;
   const product = doc.toObject({ versionKey: false });
@@ -44,6 +56,10 @@ const sanitizeProduct = (doc) => {
     product.vendorId = product.vendorId.toString();
   }
 
+  if (Array.isArray(product.variants)) {
+    product.variants = product.variants.map(sanitizeVariant);
+  }
+
   return product;
 };
 
@@ -60,6 +76,7 @@ const pickProductFields = (payload = {}) => {
     'categoryId',
     'isActive',
     'isPublished',
+    'variants',
   ];
 
   return allowed.reduce((acc, field) => {
@@ -110,6 +127,93 @@ const validateSalePrice = (price, salePrice) => {
   }
 };
 
+const pickVariantFields = (payload = {}) => {
+  const allowed = [
+    'name',
+    'sku',
+    'color',
+    'size',
+    'attributes',
+    'price',
+    'salePrice',
+    'stock',
+    'images',
+    'isActive',
+  ];
+
+  return allowed.reduce((acc, field) => {
+    if (typeof payload[field] !== 'undefined') {
+      acc[field] = payload[field];
+    }
+    return acc;
+  }, {});
+};
+
+const validateVariant = (variant, { allowPartial = false } = {}) => {
+  if (!allowPartial && !variant.name) {
+    throw buildError('VARIANT_NAME_REQUIRED');
+  }
+
+  if (!allowPartial) {
+    if (typeof variant.stock === 'undefined' || variant.stock === null) {
+      variant.stock = 0;
+    }
+    if (variant.stock < 0) {
+      throw buildError('VARIANT_STOCK_INVALID');
+    }
+  } else if (typeof variant.stock !== 'undefined' && variant.stock < 0) {
+    throw buildError('VARIANT_STOCK_INVALID');
+  }
+
+  if (typeof variant.price !== 'undefined') {
+    validateSalePrice(variant.price, variant.salePrice);
+  } else if (!allowPartial && typeof variant.salePrice !== 'undefined') {
+    throw buildError('SALE_PRICE_REQUIRES_PRICE');
+  }
+};
+
+const normalizeVariantsInput = (variants = []) => {
+  if (!Array.isArray(variants) || !variants.length) {
+    return [];
+  }
+
+  return variants.map((variant) => {
+    const sanitized = pickVariantFields(variant);
+    validateVariant(sanitized);
+    sanitized.stock = sanitized.stock ?? 0;
+    return sanitized;
+  });
+};
+
+const ensureVariantSkuUniqueness = (variants = [], existingSkus = []) => {
+  const seen = new Set(existingSkus.filter(Boolean).map((sku) => sku.trim().toUpperCase()));
+  variants.forEach((variant) => {
+    if (variant.sku) {
+      const normalized = variant.sku.trim().toUpperCase();
+      if (seen.has(normalized)) {
+        throw buildError('VARIANT_SKU_IN_USE', 409);
+      }
+      seen.add(normalized);
+    }
+  });
+};
+
+const findProductOrThrow = async (id) => {
+  const product = await Product.findById(id);
+  if (!product) {
+    throw buildError('PRODUCT_NOT_FOUND', 404);
+  }
+  return product;
+};
+
+const findVariantOrThrow = (product, variantId) => {
+  const variant = product.variants.id(variantId);
+  if (!variant) {
+    throw buildError('VARIANT_NOT_FOUND', 404);
+  }
+  return variant;
+};
+
 export const createProduct = async ({ vendorId, payload }) => {
   if (!vendorId) {
     throw buildError('VENDOR_ID_REQUIRED');
@@ -118,8 +222,22 @@ export const createProduct = async ({ vendorId, payload }) => {
   await ensureVendorExists(vendorId);
 
   const data = pickProductFields(payload);
+  const variants = normalizeVariantsInput(data.variants);
+  ensureVariantSkuUniqueness(variants);
+  if (variants.length) {
+    data.variants = variants;
+  } else {
+    delete data.variants;
+  }
 
-  if (!data.name || !data.description || typeof data.price === 'undefined' || typeof data.stock === 'undefined') {
+  const requiresStandaloneStock = !variants.length;
+
+  if (
+    !data.name ||
+    !data.description ||
+    typeof data.price === 'undefined' ||
+    (requiresStandaloneStock && typeof data.stock === 'undefined')
+  ) {
     throw buildError('PRODUCT_FIELDS_REQUIRED');
   }
 
@@ -134,6 +252,10 @@ export const createProduct = async ({ vendorId, payload }) => {
   data.slug = slug;
 
   validateSalePrice(data.price, data.salePrice);
+
+  if (variants.length) {
+    data.stock = variants.reduce((acc, variant) => acc + (variant.stock || 0), 0);
+  }
 
   const product = await Product.create({
     vendorId,
@@ -242,12 +364,21 @@ export const updateProductById = async ({ id, updates, actor }) => {
     throw buildError('NO_FIELDS_TO_UPDATE');
   }
 
-  const product = await Product.findById(id);
-  if (!product) {
-    throw buildError('PRODUCT_NOT_FOUND', 404);
-  }
+  const product = await findProductOrThrow(id);
 
   ensureOwnership(product, actor);
+
+  const replacingVariants = Object.prototype.hasOwnProperty.call(data, 'variants');
+  if (replacingVariants) {
+    const variants = normalizeVariantsInput(data.variants);
+    ensureVariantSkuUniqueness(variants);
+    product.variants = variants;
+    delete data.variants;
+  }
+
+  if (product.variants.length && !replacingVariants && Object.prototype.hasOwnProperty.call(data, 'stock')) {
+    throw buildError('STOCK_MANAGED_BY_VARIANTS');
+  }
 
   if (data.categoryId) {
     await ensureCategoryExists(data.categoryId);
@@ -263,11 +394,16 @@ export const updateProductById = async ({ id, updates, actor }) => {
     data.slug = slug;
   }
 
-  const updated = await Product.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true })
-    .populate('vendorId')
-    .populate('categoryId');
+  if (Object.keys(data).length) {
+    Object.assign(product, data);
+  }
 
-  return sanitizeProduct(updated);
+  product.recalculateStock();
+  await product.save();
+  await product.populate('vendorId');
+  await product.populate('categoryId');
+
+  return sanitizeProduct(product);
 };
 
 export const deleteProductById = async ({ id, actor }) => {
@@ -279,6 +415,115 @@ export const deleteProductById = async ({ id, actor }) => {
   ensureOwnership(product, actor);
 
   product.isActive = false;
+  await product.save();
+
+  await product.populate('vendorId');
+  await product.populate('categoryId');
+
+  return sanitizeProduct(product);
+};
+
+export const addProductVariant = async ({ id, variant, actor }) => {
+  const product = await findProductOrThrow(id);
+  ensureOwnership(product, actor);
+
+  const sanitizedVariant = pickVariantFields(variant);
+  validateVariant(sanitizedVariant);
+  sanitizedVariant.stock = sanitizedVariant.stock ?? 0;
+
+  ensureVariantSkuUniqueness([sanitizedVariant], product.variants.map((item) => item.sku));
+
+  product.variants.push(sanitizedVariant);
+  product.recalculateStock();
+  await product.save();
+
+  const createdVariant = product.variants[product.variants.length - 1];
+  return sanitizeVariant(createdVariant);
+};
+
+export const updateProductVariant = async ({ id, variantId, updates, actor }) => {
+  const product = await findProductOrThrow(id);
+  ensureOwnership(product, actor);
+
+  const variant = findVariantOrThrow(product, variantId);
+
+  const sanitizedUpdates = pickVariantFields(updates);
+  if (!Object.keys(sanitizedUpdates).length) {
+    throw buildError('NO_FIELDS_TO_UPDATE');
+  }
+
+  validateVariant(sanitizedUpdates, { allowPartial: true });
+
+  if (sanitizedUpdates.sku) {
+    const otherSkus = product.variants
+      .filter((item) => item._id.toString() !== variantId)
+      .map((item) => item.sku);
+    ensureVariantSkuUniqueness([sanitizedUpdates], otherSkus);
+  }
+
+  Object.assign(variant, sanitizedUpdates);
+  const nextPrice =
+    typeof sanitizedUpdates.price === 'number' ? sanitizedUpdates.price : variant.price;
+  if (Object.prototype.hasOwnProperty.call(sanitizedUpdates, 'salePrice')) {
+    const nextSalePrice = sanitizedUpdates.salePrice;
+    validateSalePrice(nextPrice, nextSalePrice);
+  }
+  product.recalculateStock();
+  await product.save();
+
+  return sanitizeVariant(variant);
+};
+
+export const deleteProductVariant = async ({ id, variantId, actor }) => {
+  const product = await findProductOrThrow(id);
+  ensureOwnership(product, actor);
+
+  const variant = findVariantOrThrow(product, variantId);
+  variant.remove();
+  product.recalculateStock();
+  await product.save();
+
+  return { success: true };
+};
+
+const applyStockOperation = ({ current, quantity, operation }) => {
+  if (operation === 'set') {
+    if (quantity < 0) {
+      throw buildError('STOCK_CANNOT_BE_NEGATIVE');
+    }
+    return quantity;
+  }
+
+  if (operation === 'increment') {
+    const next = current + quantity;
+    if (next < 0) {
+      throw buildError('STOCK_CANNOT_BE_NEGATIVE');
+    }
+    return next;
+  }
+
+  throw buildError('INVALID_STOCK_OPERATION');
+};
+
+export const adjustProductStock = async ({ id, variantId, quantity, operation = 'set', actor }) => {
+  if (typeof quantity !== 'number') {
+    throw buildError('STOCK_QUANTITY_REQUIRED');
+  }
+
+  const product = await findProductOrThrow(id);
+  ensureOwnership(product, actor);
+
+  if (variantId) {
+    const variant = findVariantOrThrow(product, variantId);
+    variant.stock = applyStockOperation({ current: variant.stock || 0, quantity, operation });
+  } else {
+    if (product.variants.length) {
+      throw buildError('VARIANT_STOCK_REQUIRED');
+    }
+    product.stock = applyStockOperation({ current: product.stock || 0, quantity, operation });
+  }
+
+  product.recalculateStock();
   await product.save();
 
   await product.populate('vendorId');

@@ -5,6 +5,10 @@ import {
   updateProductById,
   deleteProductById,
   getVendorByUserId,
+  addProductVariant,
+  updateProductVariant,
+  deleteProductVariant,
+  adjustProductStock,
 } from '../services/index.js';
 
 const productErrorMessages = {
@@ -21,6 +25,15 @@ const productErrorMessages = {
   SALE_PRICE_INVALID: 'El precio en oferta debe ser menor al precio base.',
   SALE_PRICE_REQUIRES_PRICE: 'No puedes definir un precio en oferta sin precio base.',
   NO_FIELDS_TO_UPDATE: 'Debes especificar al menos un campo para actualizar.',
+  VARIANT_NAME_REQUIRED: 'Cada variante debe tener un nombre.',
+  VARIANT_STOCK_INVALID: 'El stock de la variante debe ser mayor o igual a 0.',
+  VARIANT_SKU_IN_USE: 'El SKU de la variante ya está en uso en este producto.',
+  VARIANT_NOT_FOUND: 'No se encontró la variante solicitada.',
+  STOCK_MANAGED_BY_VARIANTS: 'Cuando hay variantes, el stock se administra desde ellas.',
+  STOCK_CANNOT_BE_NEGATIVE: 'El stock no puede ser negativo.',
+  INVALID_STOCK_OPERATION: 'Operación de stock inválida.',
+  VARIANT_STOCK_REQUIRED: 'Debes especificar la variante para ajustar el stock.',
+  STOCK_QUANTITY_REQUIRED: 'Debes indicar la cantidad para ajustar el stock.',
 };
 
 const handleError = (res, error) => {
@@ -153,6 +166,58 @@ export const deleteProductController = async (req, res) => {
     const actor = await buildActorContext(req);
     await deleteProductById({ id: req.params.id, actor });
     return res.json({ message: 'Producto desactivado.' });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+export const addProductVariantController = async (req, res) => {
+  try {
+    const actor = await buildActorContext(req);
+    const variant = await addProductVariant({ id: req.params.id, variant: req.body, actor });
+    return res.status(201).json({ message: 'Variante creada.', variant });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+export const updateProductVariantController = async (req, res) => {
+  try {
+    const actor = await buildActorContext(req);
+    const variant = await updateProductVariant({
+      id: req.params.id,
+      variantId: req.params.variantId,
+      updates: req.body,
+      actor,
+    });
+    return res.json({ message: 'Variante actualizada.', variant });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+export const deleteProductVariantController = async (req, res) => {
+  try {
+    const actor = await buildActorContext(req);
+    await deleteProductVariant({ id: req.params.id, variantId: req.params.variantId, actor });
+    return res.json({ message: 'Variante eliminada.' });
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+export const adjustProductStockController = async (req, res) => {
+  try {
+    const actor = await buildActorContext(req);
+    const { variantId, quantity, operation } = req.body;
+    const product = await adjustProductStock({
+      id: req.params.id,
+      variantId,
+      quantity,
+      operation,
+      actor,
+    });
+    return res.json({ message: 'Stock actualizado.', product });
   } catch (error) {
     return handleError(res, error);
   }

@@ -6,6 +6,10 @@ import {
   getProductController,
   updateProductController,
   deleteProductController,
+  addProductVariantController,
+  updateProductVariantController,
+  deleteProductVariantController,
+  adjustProductStockController,
 } from '../controllers/index.js';
 import { validateRequest, requireAuth, authorizeRoles } from '../middlewares/index.js';
 
@@ -27,7 +31,8 @@ const productValidations = ({ requireCoreFields = false } = {}) => [
     .isFloat({ gt: 0 })
     .withMessage('price debe ser mayor que 0.')
     .toFloat(),
-  (requireCoreFields ? body('stock').exists() : body('stock').optional())
+  body('stock')
+    .optional()
     .isInt({ min: 0 })
     .withMessage('stock debe ser un entero >= 0.')
     .toInt(),
@@ -57,6 +62,31 @@ const productValidations = ({ requireCoreFields = false } = {}) => [
   body('slug').optional().isString().trim().isLength({ min: 3 }).withMessage('slug debe tener al menos 3 caracteres.'),
   body('isActive').optional().isBoolean().withMessage('isActive debe ser booleano.').toBoolean(),
   body('isPublished').optional().isBoolean().withMessage('isPublished debe ser booleano.').toBoolean(),
+  body('variants')
+    .optional()
+    .isArray({ max: 50 })
+    .withMessage('variants debe ser un arreglo con máximo 50 elementos.'),
+  body('variants.*.name')
+    .optional()
+    .isString()
+    .trim()
+    .withMessage('Cada variante debe incluir un nombre.'),
+  body('variants.*.stock')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('El stock de la variante debe ser >= 0.')
+    .toInt(),
+  body('variants.*.price').optional().isFloat({ gt: 0 }).withMessage('El precio de la variante debe ser > 0.').toFloat(),
+  body('variants.*.salePrice')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('El precio en oferta de la variante debe ser > 0.')
+    .toFloat(),
+  body('variants.*.sku').optional().isString().trim().withMessage('El SKU de la variante debe ser texto.'),
+  body('variants.*.images')
+    .optional()
+    .isArray({ max: 5 })
+    .withMessage('Cada variante puede tener máximo 5 imágenes.'),
 ];
 
 const listValidations = [
@@ -72,6 +102,37 @@ const listValidations = [
 ];
 
 const idValidation = [param('id').isMongoId().withMessage('El ID proporcionado no es válido.')];
+const variantIdValidation = [param('variantId').isMongoId().withMessage('El ID de la variante no es válido.')];
+
+const singleVariantValidations = ({ requireName = false } = {}) => [
+  (requireName ? body('name').exists() : body('name').optional())
+    .isString()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('El nombre de la variante debe tener al menos 2 caracteres.'),
+  body('sku').optional().isString().trim().withMessage('El SKU debe ser texto.'),
+  body('color').optional().isString().trim().withMessage('color debe ser texto.'),
+  body('size').optional().isString().trim().withMessage('size debe ser texto.'),
+  body('price').optional().isFloat({ gt: 0 }).withMessage('price debe ser > 0.').toFloat(),
+  body('salePrice').optional().isFloat({ gt: 0 }).withMessage('salePrice debe ser > 0.').toFloat(),
+  body('stock').optional().isInt({ min: 0 }).withMessage('stock debe ser >= 0.').toInt(),
+  body('images')
+    .optional()
+    .isArray({ max: 5 })
+    .withMessage('images debe ser un arreglo con máximo 5 elementos.'),
+  body('images.*').optional({ nullable: true }).isString().trim().withMessage('Cada imagen debe ser texto.'),
+  body('attributes')
+    .optional()
+    .custom((value) => typeof value === 'object' && !Array.isArray(value))
+    .withMessage('attributes debe ser un objeto.'),
+  body('isActive').optional().isBoolean().withMessage('isActive debe ser booleano.').toBoolean(),
+];
+
+const stockAdjustmentValidations = [
+  body('operation').optional().isIn(['set', 'increment']).withMessage('operation debe ser set o increment.'),
+  body('quantity').exists().isFloat().withMessage('quantity debe ser numérico.').toFloat(),
+  body('variantId').optional().isMongoId().withMessage('variantId debe ser válido.'),
+];
 
 router.post('/', ...managedAccess, validateRequest(productValidations({ requireCoreFields: true })), createProductController);
 router.get('/', validateRequest(listValidations), listProductsController);
@@ -83,5 +144,33 @@ router.patch(
   updateProductController,
 );
 router.delete('/:id', ...managedAccess, validateRequest(idValidation), deleteProductController);
+
+router.post(
+  '/:id/variants',
+  ...managedAccess,
+  validateRequest([...idValidation, ...singleVariantValidations({ requireName: true })]),
+  addProductVariantController,
+);
+
+router.patch(
+  '/:id/variants/:variantId',
+  ...managedAccess,
+  validateRequest([...idValidation, ...variantIdValidation, ...singleVariantValidations()]),
+  updateProductVariantController,
+);
+
+router.delete(
+  '/:id/variants/:variantId',
+  ...managedAccess,
+  validateRequest([...idValidation, ...variantIdValidation]),
+  deleteProductVariantController,
+);
+
+router.patch(
+  '/:id/stock',
+  ...managedAccess,
+  validateRequest([...idValidation, ...stockAdjustmentValidations]),
+  adjustProductStockController,
+);
 
 export default router;
