@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
-import Order from '../models/order.model.js';
+import Order, { ORDER_STATUSES } from '../models/order.model.js';
 import { clearCartItems, validateCartStockForUser } from './cart.service.js';
 import { adjustProductStock } from './product.service.js';
 import { getBuyerProfileByUserId } from './buyerProfile.service.js';
+import { getVendorByUserId } from './vendor.service.js';
 
 const { Types } = mongoose;
 
@@ -15,7 +16,13 @@ const buildError = (message, statusCode = 400, metadata = {}) => {
   return error;
 };
 
-const sanitizeOrder = (doc) => {
+const assertValidStatus = (status) => {
+  if (!ORDER_STATUSES.includes(status)) {
+    throw buildError('ORDER_STATUS_INVALID');
+  }
+};
+
+const sanitizeOrder = (doc, { vendorId } = {}) => {
   if (!doc) return null;
   const order = doc.toObject({ versionKey: false });
 
@@ -36,12 +43,24 @@ const sanitizeOrder = (doc) => {
   order.vendors = order.vendors.map((vendor) => ({
     ...vendor,
     vendorId: vendor.vendorId?.toString(),
+    statusHistory: (vendor.statusHistory || []).map((entry) => ({
+      ...entry,
+      changedAt: entry.changedAt instanceof Date ? entry.changedAt.toISOString() : entry.changedAt,
+    })),
   }));
 
   order.statusHistory = order.statusHistory.map((entry) => ({
     ...entry,
     changedAt: entry.changedAt instanceof Date ? entry.changedAt.toISOString() : entry.changedAt,
   }));
+
+  if (vendorId) {
+    const vendorIdStr = vendorId.toString();
+    order.items = order.items.filter((item) => item.vendorId === vendorIdStr);
+    const vendorSummary = order.vendors.find((entry) => entry.vendorId === vendorIdStr) || null;
+    order.vendorContext = vendorSummary;
+    order.vendors = vendorSummary ? [vendorSummary] : [];
+  }
 
   order.createdAt = order.createdAt?.toISOString?.() || order.createdAt;
   order.updatedAt = order.updatedAt?.toISOString?.() || order.updatedAt;
@@ -111,6 +130,15 @@ const buildVendorSummaries = (items) => {
   return Array.from(map.values()).map((entry) => ({
     ...entry,
     subtotal: Number(entry.subtotal.toFixed(2)),
+    status: 'pending',
+    statusHistory: [
+      {
+        status: 'pending',
+        notes: 'Pedido pendiente para la vendedora.',
+        changedAt: new Date(),
+        changedBy: 'system',
+      },
+    ],
   }));
 };
 
@@ -122,6 +150,26 @@ const ensureBuyerActor = (user = {}) => {
   if (user.role !== 'compradora' && user.role !== 'admin') {
     throw buildError('USER_NOT_ALLOWED', 403);
   }
+};
+
+const resolveVendorContext = async ({ actor, vendorId }) => {
+  if (!actor?._id) {
+    throw buildError('USER_NOT_FOUND', 401);
+  }
+
+  if (actor.role === 'vendedora') {
+    const vendor = await getVendorByUserId(actor._id);
+    return { vendorId: vendor._id.toString(), isSelf: true };
+  }
+
+  if (actor.role === 'admin') {
+    if (!vendorId) {
+      throw buildError('VENDOR_ID_REQUIRED', 400);
+    }
+    return { vendorId, isSelf: false };
+  }
+
+  throw buildError('USER_NOT_ALLOWED', 403);
 };
 
 const getBuyerSnapshot = async ({ user, shippingAddress }) => {
@@ -191,6 +239,7 @@ export const createOrderFromCart = async ({ user, shippingAddress, paymentMethod
         status: 'pending',
         notes: 'Pedido creado automáticamente desde el carrito.',
         changedAt: new Date(),
+        changedBy: 'system',
       },
     ],
     items: orderItems,
@@ -276,4 +325,105 @@ export const getOrderById = async ({ id, actor }) => {
 
   ensureOrderAccess(order, actor);
   return sanitizeOrder(order);
+};
+
+export const listVendorOrders = async ({ actor, page = 1, limit = 20, status, vendorId }) => {
+  const { vendorId: scopeVendorId } = await resolveVendorContext({ actor, vendorId });
+
+  const vendorObjectId = new Types.ObjectId(scopeVendorId);
+  const query = { 'vendors.vendorId': vendorObjectId };
+  if (status) {
+    assertValidStatus(status);
+    query['vendors.status'] = status;
+  }
+
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const safePage = Math.max(Number(page) || 1, 1);
+  const skip = (safePage - 1) * safeLimit;
+
+  const [items, total] = await Promise.all([
+    Order.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(safeLimit),
+    Order.countDocuments(query),
+  ]);
+
+  return {
+    items: items.map((order) => sanitizeOrder(order, { vendorId: scopeVendorId })),
+    total,
+    page: safePage,
+    pages: Math.max(Math.ceil(total / safeLimit), 1),
+  };
+};
+
+export const getVendorOrderById = async ({ id, actor, vendorId }) => {
+  const { vendorId: scopeVendorId } = await resolveVendorContext({ actor, vendorId });
+  const order = await Order.findById(id);
+  if (!order) {
+    throw buildError('ORDER_NOT_FOUND', 404);
+  }
+
+  const vendorEntry = order.vendors.find((entry) => entry.vendorId.toString() === scopeVendorId);
+  if (!vendorEntry) {
+    throw buildError('ORDER_VENDOR_NOT_FOUND', 404);
+  }
+
+  return sanitizeOrder(order, { vendorId: scopeVendorId });
+};
+
+export const updateOrderStatus = async ({ id, status, notes, actor }) => {
+  if (actor.role !== 'admin') {
+    throw buildError('USER_NOT_ALLOWED', 403);
+  }
+
+  assertValidStatus(status);
+  const order = await Order.findById(id);
+  if (!order) {
+    throw buildError('ORDER_NOT_FOUND', 404);
+  }
+
+  if (order.status === status) {
+    return sanitizeOrder(order);
+  }
+
+  order.status = status;
+  order.statusHistory.push({
+    status,
+    notes,
+    changedAt: new Date(),
+    changedBy: 'admin',
+  });
+
+  await order.save();
+  return sanitizeOrder(order);
+};
+
+export const updateVendorOrderStatus = async ({ id, status, notes, actor, vendorId }) => {
+  assertValidStatus(status);
+  const { vendorId: scopeVendorId, isSelf } = await resolveVendorContext({ actor, vendorId });
+
+  const order = await Order.findById(id);
+  if (!order) {
+    throw buildError('ORDER_NOT_FOUND', 404);
+  }
+
+  const vendorEntry = order.vendors.find((entry) => entry.vendorId.toString() === scopeVendorId);
+  if (!vendorEntry) {
+    throw buildError('ORDER_VENDOR_NOT_FOUND', 404);
+  }
+
+  vendorEntry.status = status;
+  vendorEntry.statusHistory = vendorEntry.statusHistory || [];
+  vendorEntry.statusHistory.push({
+    status,
+    notes,
+    changedAt: new Date(),
+    changedBy: actor.role === 'admin' && !isSelf ? 'admin' : 'vendor',
+  });
+
+  await order.save();
+
+  const options = actor.role === 'vendedora' ? { vendorId: scopeVendorId } : {};
+  return sanitizeOrder(order, options);
 };

@@ -4,7 +4,12 @@ import {
   createOrderController,
   listOrdersController,
   getOrderController,
+  listVendorOrdersController,
+  getVendorOrderController,
+  updateOrderStatusController,
+  updateVendorOrderStatusController,
 } from '../controllers/index.js';
+import { ORDER_STATUSES } from '../models/order.model.js';
 import { validateRequest, requireAuth, authorizeRoles } from '../middlewares/index.js';
 
 const router = Router();
@@ -55,6 +60,15 @@ const paginationValidations = [
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit debe estar entre 1 y 100.'),
 ];
 
+const vendorListValidations = [
+  ...paginationValidations,
+  query('status')
+    .optional()
+    .isIn(ORDER_STATUSES)
+    .withMessage(`status debe ser uno de: ${ORDER_STATUSES.join(', ')}`),
+  query('vendorId').optional().isMongoId().withMessage('vendorId debe ser válido.'),
+];
+
 router.post(
   '/',
   authorizeRoles('compradora', 'admin'),
@@ -69,6 +83,60 @@ router.post(
 
 router.get('/', validateRequest(paginationValidations), listOrdersController);
 
+router.get(
+  '/vendor',
+  authorizeRoles('vendedora', 'admin'),
+  validateRequest(vendorListValidations),
+  listVendorOrdersController,
+);
+
+router.get(
+  '/vendor/:id',
+  authorizeRoles('vendedora', 'admin'),
+  validateRequest([
+    param('id').isMongoId().withMessage('El ID del pedido es inválido.'),
+    query('vendorId').optional().isMongoId().withMessage('vendorId debe ser válido.'),
+  ]),
+  getVendorOrderController,
+);
+
 router.get('/:id', validateRequest([param('id').isMongoId().withMessage('El ID del pedido es inválido.')]), getOrderController);
+
+router.patch(
+  '/:id/status',
+  authorizeRoles('admin'),
+  validateRequest([
+    param('id').isMongoId().withMessage('El ID del pedido es inválido.'),
+    body('status')
+      .isIn(ORDER_STATUSES)
+      .withMessage(`status debe ser uno de: ${ORDER_STATUSES.join(', ')}`),
+    body('notes')
+      .optional()
+      .isString()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('notes debe tener máximo 500 caracteres.'),
+  ]),
+  updateOrderStatusController,
+);
+
+router.patch(
+  '/:id/vendor-status',
+  authorizeRoles('vendedora', 'admin'),
+  validateRequest([
+    param('id').isMongoId().withMessage('El ID del pedido es inválido.'),
+    body('status')
+      .isIn(ORDER_STATUSES)
+      .withMessage(`status debe ser uno de: ${ORDER_STATUSES.join(', ')}`),
+    body('vendorId').optional().isMongoId().withMessage('vendorId debe ser válido.'),
+    body('notes')
+      .optional()
+      .isString()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('notes debe tener máximo 500 caracteres.'),
+  ]),
+  updateVendorOrderStatusController,
+);
 
 export default router;

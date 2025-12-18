@@ -101,6 +101,10 @@ backend/
 - `POST /api/orders`: genera un pedido a partir del carrito validado.
 - `GET /api/orders`: lista los pedidos del usuario autenticado (admin ve todos).
 - `GET /api/orders/:id`: detalle del pedido si eres dueña o admin.
+- `GET /api/orders/vendor`: lista pedidos que incluyen a la vendedora autenticada (admin puede filtrar por `vendorId`).
+- `GET /api/orders/vendor/:id`: detalle de un pedido filtrado a los ítems de la vendedora.
+- `PATCH /api/orders/:id/status`: actualiza el estado global del pedido (solo admin).
+- `PATCH /api/orders/:id/vendor-status`: actualiza el estado de cumplimiento para una vendedora específica (vendedora o admin).
 
 ### Ejemplo `POST /api/auth/register`
 
@@ -126,6 +130,34 @@ Respuesta esperada (201):
 		"isActive": true,
 		"createdAt": "2025-12-17T...",
 		"updatedAt": "2025-12-17T..."
+	}
+}
+```
+
+### Ejemplo `PATCH /api/orders/:id/vendor-status`
+
+```bash
+curl -X PATCH http://localhost:4000/api/orders/<order_id>/vendor-status \
+	-H "Authorization: Bearer <jwt_vendedora>" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"status": "processing",
+		"notes": "Pedido empacado y listo para despacho"
+	}'
+```
+
+Respuesta esperada (200):
+
+```json
+{
+	"message": "Estado para la vendedora actualizado.",
+	"order": {
+		"vendorContext": {
+			"status": "processing",
+			"statusHistory": [
+				{ "status": "processing", "changedBy": "vendor" }
+			]
+		}
 	}
 }
 ```

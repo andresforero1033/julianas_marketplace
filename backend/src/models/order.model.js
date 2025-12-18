@@ -63,6 +63,30 @@ const orderItemSchema = new Schema(
   },
 );
 
+const statusHistorySchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      required: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    changedBy: {
+      type: String,
+      enum: ['system', 'admin', 'vendor', 'buyer'],
+      default: 'system',
+    },
+  },
+  { _id: false },
+);
+
 const vendorSummarySchema = new Schema(
   {
     vendorId: {
@@ -85,24 +109,14 @@ const vendorSummarySchema = new Schema(
       required: true,
       min: 0,
     },
-  },
-  { _id: false },
-);
-
-const statusHistorySchema = new Schema(
-  {
     status: {
       type: String,
       enum: ORDER_STATUSES,
-      required: true,
+      default: 'pending',
     },
-    notes: {
-      type: String,
-      trim: true,
-    },
-    changedAt: {
-      type: Date,
-      default: Date.now,
+    statusHistory: {
+      type: [statusHistorySchema],
+      default: [],
     },
   },
   { _id: false },
